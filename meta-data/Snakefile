@@ -1,58 +1,58 @@
-envvars:
-    "ACCESSIONS",
-    "NEW_ACCESSION",
-    "CACHE_PATH",
-    "BATCH",
-    "COVARIATE",
-    "COVARIATE_TYPE",
-    "SPECIES"
-
-
 SUFFIXES=['-configuration.xml', '.idf.txt', '.condensed-sdrf.tsv', '.sdrf.txt']
 DATA_SUFFIXES=['-transcripts-raw-counts.tsv.undecorated', '-raw-counts.tsv.undecorated']
+TARGET_ANALYSIS_POST_CURATION="analysis-post-curation"
+TARGET_CURATION="curation"
 
-if "SEND_TO_ANALYSIS" in os.environ:
+if "retrieve_data" in config:
     SUFFIXES.extend(DATA_SUFFIXES)
 
 def optionals_merge():
     """
     Produces optionals for the condensed SDRF merge call based
-    COVARIATE_SKIP_VALUES environment variable.
+    covariate_skip_values config.
     """
     optionals=""
-    if "COVARIATE_SKIP_VALUES" in os.environ:
-        optionals=f" --covariate-skip-values '{os.environ['COVARIATE_SKIP_VALUES']}'"
+    if "covariate_skip_values" in config:
+        optionals=f" --covariate-skip-values '{config['covariate_skip_values']}'"
 
     return optionals
 
 
 def optionals_retrieve_data():
     """
-    Produces optionals for the retrieve data call, based on the REPLACE_DOWNLOADS
-    and SEND_TO_ANALYSIS environment variables.
+    Produces optionals for the retrieve data call, based on the replace_downloads
+    and retrieve_data config variables.
     """
     optionals=""
-    if "REPLACE_DOWNLOADS" in os.environ:
+    if "replace_downloads" in config:
         optionals=" -r"
 
-    if "SEND_TO_ANALYSIS" in os.environ:
-        optionals=" -d"
+    if "retrieve_data" in config or ('target' config and config['target'] == TARGET_ANALYSIS_POST_CURATION):
+        optionals=f"{optionals} -d"
 
     return optionals
 
-def get_outputs(new_accession):
+def get_outputs():
     """
     Produces all outputs required, adding the data outputs if needed
-    when SEND_TO_ANALYSIS is set.
+    when retrieve_data is set in config.
     """
-    outputs = [f"tmp_results/{new_accession}.sdrf.txt",
-        f"tmp_results/{new_accession}.condensed.sdrf.tsv",
-        f"tmp_results/{new_accession}-configuration.xml"
-        ]
-    if "SEND_TO_ANALYSIS" in os.environ:
-        outputs.extend([f"tmp_results/{new_accession}{x}" for x in DATA_SUFFIXES])
+    new_accession = config['new_accession']
+    outputs = []
+    if 'target' in config:
+        if config['target'] == TARGET_CURATION:
+            outputs = [f"tmp_results/{new_accession}.sdrf.txt"]
+        elif config['target'] == TARGET_ANALYSIS_POST_CURATION:
+            outputs.extend([f"tmp_results/{new_accession}{x}" for x in DATA_SUFFIXES])
+    else:
+        outputs = [f"tmp_results/{new_accession}.sdrf.txt",
+                    f"tmp_results/{new_accession}.condensed.sdrf.tsv",
+                    f"tmp_results/{new_accession}-configuration.xml"]
 
-    if "SPECIES" in os.environ:
+        if "retrieve_data" in config:
+            outputs.extend([f"tmp_results/{new_accession}{x}" for x in DATA_SUFFIXES])
+
+    if "species" in config:
         outputs.extend([f"tmp_results/{new_accession}.gtf])
 
     return outputs
@@ -73,18 +73,18 @@ wildcard_constraints:
 
 rule all:
     input:
-        required_outputs=get_outputs(os.environ["NEW_ACCESSION"])
+        required_outputs=get_outputs()
 
 rule retrieve_data:
     params:
-        accessions=os.environ["ACCESSIONS"],
+        accessions=config["accessions"],
         optionals=optionals_retrieve_data()
     output:
-        data=expand(os.environ['CACHE_PATH']+"/data/{accession}/{accession}{suffix}", accession=os.environ["ACCESSIONS"].split(","), suffix=SUFFIXES),
-        data_path=directory(os.environ["CACHE_PATH"]+"/data")
+        data=expand(config['cache_path']+"/data/{accession}/{accession}{suffix}", accession=config["accessions"].split(","), suffix=SUFFIXES),
+        data_path=directory(config["cache_path"]+"/data")
     conda:
         "envs/MAGETab-merger.yaml"
-    log: f"logs/{os.environ['NEW_ACCESSION']}.log"
+    log: f"logs/{config['new_accession']}_retrieve_data.log"
     shell:
         """
         mkdir -p {output.data_path}
@@ -93,26 +93,26 @@ rule retrieve_data:
 
 def existing_or_retrieve(type):
     """
-    If environment variable INPUT_PATH is set, then no data retrieval takes
+    If config input_path is set, then no data retrieval takes
     place as the operator has sourced all needed files.
     """
-    if "INPUT_PATH" not in os.environ:
+    if "input_path" not in config:
         if type == "path":
             return rules.retrieve_data.output.data_path
         else:
             return rules.retrieve_data.output.data
     else:
         if type == "path":
-            return os.environ["INPUT_PATH"]
+            return config["input_path"]
         else:
             return []
 
 rule merge_condensed:
     params:
-        accessions=os.environ["ACCESSIONS"],
-        batch=os.environ["BATCH"],
-        covariate=os.environ["COVARIATE"],
-        covariate_type=os.environ["COVARIATE_TYPE"],
+        accessions=config["accessions"],
+        batch=config["batch"],
+        covariate=config["covariate"],
+        covariate_type=config["covariate_type"],
         optionals=optionals_merge()
     input:
         path=existing_or_retrieve("path"),
@@ -186,7 +186,7 @@ rule_retrieve_gtf:
     output:
         gtf: "tmp_results/{new_acc}.gtf"
     params:
-        species: os.environ["SPECIES"]
+        species: config["species"]
         tag: "current"
     conda:
         "envs/refgenie.yaml"
