@@ -1,3 +1,4 @@
+configfile: "config.yaml"
 SUFFIXES=['-configuration.xml', '.idf.txt', '.condensed-sdrf.tsv', '.sdrf.txt']
 DATA_SUFFIXES=['-transcripts-raw-counts.tsv.undecorated', '-raw-counts.tsv.undecorated']
 TARGET_ANALYSIS_POST_CURATION="analysis-post-curation"
@@ -27,7 +28,7 @@ def optionals_retrieve_data():
     if "replace_downloads" in config:
         optionals=" -r"
 
-    if "retrieve_data" in config or ('target' config and config['target'] == TARGET_ANALYSIS_POST_CURATION):
+    if "retrieve_data" in config or ('target' in config and config['target'] == TARGET_ANALYSIS_POST_CURATION):
         optionals=f"{optionals} -d"
 
     return optionals
@@ -53,7 +54,7 @@ def get_outputs():
             outputs.extend([f"tmp_results/{new_accession}{x}" for x in DATA_SUFFIXES])
 
     if "species" in config:
-        outputs.extend([f"tmp_results/{new_accession}.gtf])
+        outputs.extend([f"tmp_results/{new_accession}.gtf"])
 
     return outputs
 
@@ -182,12 +183,12 @@ rule merge_baseline_configuration_xmls:
         rm -rf tmp_configs
         """
 
-rule_retrieve_gtf:
+rule retrieve_gtf:
     output:
-        gtf: "tmp_results/{new_acc}.gtf"
+        gtf="tmp_results/{new_acc}.gtf"
     params:
-        species: config["species"]
-        tag: "current"
+        species=config["species"],
+        tag="current"
     conda:
         "envs/refgenie.yaml"
     shell:
