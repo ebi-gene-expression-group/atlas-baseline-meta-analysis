@@ -151,7 +151,7 @@ rule merge_sdrfs:
         rm -rf tmp_sdrfs
         mkdir -p tmp_sdrfs
         for acc in $(cat {input.accessions_file} | tr ',' ' '); do
-          ln -s {input.path}/$acc/$acc'.sdrf.txt' tmp_sdrfs/$acc'.sdrf.txt'
+          ln {input.path}/$acc/$acc'.sdrf.txt' tmp_sdrfs/$acc'.sdrf.txt'
         done
         merge_sdrfs.py -d tmp_sdrfs --accessions-file {input.accessions_file} \
             -o {output.merged_sdrf} 2> {log}
@@ -173,7 +173,7 @@ rule merge_baseline_configuration_xmls:
         rm -rf tmp_configs
         mkdir -p tmp_configs
         for acc in $(cat {input.accessions_file} | tr ',' ' '); do
-          ln -s {params.input_path}/$acc/$acc'-configuration.xml' tmp_configs/$acc'-configuration.xml'
+          ln {params.input_path}/$acc/$acc'-configuration.xml' tmp_configs/$acc'-configuration.xml'
         done
         merge_baseline_configuration_xmls.py \
             --accessions-file {input.accessions_file} \
