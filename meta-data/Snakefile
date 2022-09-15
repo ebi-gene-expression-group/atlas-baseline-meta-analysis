@@ -1,4 +1,3 @@
-configfile: "config.yaml"
 SUFFIXES=['-configuration.xml', '.idf.txt', '.condensed-sdrf.tsv', '.sdrf.txt']
 DATA_SUFFIXES=['-transcripts-raw-counts.tsv.undecorated', '-raw-counts.tsv.undecorated']
 TARGET_ANALYSIS_POST_CURATION="analysis-post-curation"
