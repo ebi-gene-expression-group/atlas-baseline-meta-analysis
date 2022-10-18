@@ -69,17 +69,26 @@ So, as a summary, each accesion in `$ACCESSIONS` is expected to have its own dir
 ```
 cd desired/working/directory
 # start snakemake environment - possibly conda activate snakemake
-snakemake --snakefile <PATH_TO_THIS_REPO>/meta-data/Snakefile --cores 2 --use-conda --conda-frontend mamba
+snakemake --snakefile <PATH_TO_THIS_REPO>/meta-data/Snakefile --cores 2 --use-conda --conda-frontend mamba --config accessions=<accession list> new_accession=<new accession> cache_path=<path for temp files> batch=<batch> covariate=<covariate> covariate_type=characteristic species=<species name> retrieve_data=True
+```
+
+Example run:
+
+```
+cd desired/working/directory
+# start snakemake environment - possibly conda activate snakemake
+snakemake --snakefile <PATH_TO_THIS_REPO>/meta-data/Snakefile --cores 2 --use-conda --conda-frontend mamba --config accessions=E-GEOD-53197,E-GEOD-55482,E-CURD-31,E-GEOD-52806,E-GEOD-64740 new_accession=E-SUPR-1 cache_path=cache batch=study covariate="organism part" covariate_type=characteristic species="arabidopsis_thaliana" retrieve_data=True
 ```
 
 ### Results
 
-Results will be present on the working directory, inside `tmp_results`. In the maximal execution setting (with data), you should see given a `$NEW_ACCESSION` set to `E-CORN-1`:
+Results will be present on the working directory, inside `tmp_results/data/<new accession>`. In the maximal execution setting (with data), you should see given a `$NEW_ACCESSION` set to `E-SUPR-1`:
 
 ```
-E-CORN-1-configuration.xml                      E-CORN-1.condensed.sdrf.tsv
-E-CORN-1-raw-counts.tsv.undecorated             E-CORN-1.sdrf.tsv
-E-CORN-1-transcripts-raw-counts.tsv.undecorated	E-CORN-1.selected_studies.txt
+E-SUPR-1-configuration.xml                      E-SUPR-1.condensed.sdrf.tsv
+E-SUPR-1-raw-counts.tsv.undecorated             E-SUPR-1.sdrf.tsv
+E-SUPR-1-transcripts-raw-counts.tsv.undecorated	E-SUPR-1.selected_studies.txt
+E-SUPR-1.gtf                                    E-SUPR-1-analysis-methods.tsv
 ```
 
 Most files are self explanatory, the `selected_studies.txt` files contains a comma separate list of the original accessions used.
@@ -91,31 +100,37 @@ The current analysis setup enables to merge Atlas RNA-Seq baseline datasets that
 
 This analysis requires:
 
-- RAW counts for genes: at `data/{accesion}-raw-counts.tsv.undecorated`
-- RAW counts for transcripts: at `data/{accesion}-transcripts-raw-counts.tsv.undecorated`
-- GTF file for the organism, which matches what was used to generate counts: at `data/reference.gtf`
-- Merged configuration XML file with assays: at `{accesion}-configuration.xml`
-- Merged SDRF file: at `data/{accesion}.sdrf.txt`
-- Methods file, containing analysis methods used so far: at `data/{accesion}-analysis-methods.tsv`
+- RAW counts for genes: at `data/{accesion}/{accesion}-raw-counts.tsv.undecorated`
+- RAW counts for transcripts: at `data/{accesion}/{accesion}-transcripts-raw-counts.tsv.undecorated`
+- GTF file for the organism, which matches what was used to generate counts: at `data/{accesion}/{accesion}.gtf`
+- Merged configuration XML file with assays: at `data/{accesion}/{accesion}-configuration.xml`
+- Merged SDRF file: at `data/{accesion}/{accesion}.sdrf.txt`
+- Methods file, containing analysis methods used so far: at `data/{accesion}/{accesion}-analysis-methods.tsv`
 
 ## Running the analysis
 
 Once you have the following files in place in a `data` directory (TODO generalise this) with the `ACCESSION` being the newly minted accession for the merged dataset:
 
 ```
-data/<ACCESSION>-analysis-methods.tsv
-data/<ACCESSION>-configuration.xml
-data/<ACCESSION>-raw-counts.tsv.undecorated
-data/<ACCESSION>-transcripts-raw-counts.tsv.undecorated
-data/<ACCESSION>.sdrf.tsv
-data/reference.gtf
+data/<ACCESSION>/<ACCESSION>-analysis-methods.tsv
+data/<ACCESSION>/<ACCESSION>-configuration.xml
+data/<ACCESSION>/<ACCESSION>-raw-counts.tsv.undecorated
+data/<ACCESSION>/<ACCESSION>-transcripts-raw-counts.tsv.undecorated
+data/<ACCESSION>/<ACCESSION>.sdrf.tsv
+data/<ACCESSION>/<ACCESSION>.gtf
 ```
 
 then run:
 
 ```
-snakemake --cores 2 --use-conda --conda-frontend mamba \
-  --config accession=<ACCESSION>
+snakemake -p --snakefile <PATH_TO_THIS_REPO>/data-analysis/Snakefile --cores 2 --use-conda --conda-frontend mamba \
+  --config accession=<ACCESSION> cache_path=<path for temp files> batch=<batch>
+```
+
+example run:
+
+```
+snakemake -p --snakefile <PATH_TO_THIS_REPO>/data-analysis/Snakefile --cores 2 --use-conda --conda-frontend conda --config accession=E-SUPR-1 cache_path=tmp_results batch=Study
 ```
 
 This will create results in two directories:
