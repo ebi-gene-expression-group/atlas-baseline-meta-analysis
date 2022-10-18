@@ -35,11 +35,13 @@ done
 mkdir -p "$(dirname $path_to_destination)"
 
 tmp_files="$path_to_destination.$(date -u +"%Y-%m-%d_%H:%M").tmp"
-trap 'rm -f ${tmp_files}.*' INT TERM EXIT
+#trap 'rm -f ${tmp_files}.*' INT TERM EXIT
 
-tmp_config_tsv=$tmp_files.config.tsv
+tmp_config_tsv="$tmp_files.config.tsv"
+tmp_config_log="$tmp_files.config.log"
 # Produce a file that is <assay_group>\t<assay> with xpath
-$scriptDir/get_assays_per_group.sh "$path_to_experiment_config" > "$tmp_config_tsv"
+
+$scriptDir/get_assays_per_group.sh "${path_to_experiment_config}" > "${tmp_config_tsv}" 2> "${tmp_config_log}"
 
 columns_with_right_assays=$(join -1 2 -o 1.1 -2 1 <(head -n1 "$path_to_source" | tr $'\t' $'\n' | cat -n | sort -k2) <(cut -f 3 "$tmp_config_tsv" | sort -u) | tr $'\n' ',' | sed 's/,$//')
 
