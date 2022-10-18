@@ -38,13 +38,13 @@ suppressPackageStartupMessages(require(purrr))
 opt <- parse_args(OptionParser(option_list=option_list))
 
 correct_batch_effect<-function(experiment, model, method=c('ComBat','RUV','MNN'), k){
-  log<-experiment@assays$data %>% names %>% switch(log_counts=TRUE, counts=FALSE)
+  log<-experiment@assays@data %>% names %>% switch(log_counts=TRUE, counts=FALSE)
   model.data<-model.frame(model, experiment@colData[all.vars(model)])
   assays<-list()
   if(method == "ComBat") {
     print("Running ComBat...")
     #assays$corrected_counts <- ComBat(experiment@assays$data[[1]], experiment$batch, mod=model.matrix(model, data=model.data))
-    assays$corrected_counts <- ComBat_seq(experiment@assays$data[[1]], experiment$batch, covar_mod=model.matrix(model, data=model.data))
+    assays$corrected_counts <- ComBat_seq(experiment@assays@data[[1]], experiment$batch, covar_mod=model.matrix(model, data=model.data))
   } else if(method == "RUV") {
     print("Running RUV...")
     assays$corrected_counts <- RUVs(experiment@assays$data[[1]], cIdx=seq_len(nrow(experiment@assays$data[[1]])), k=k,
@@ -61,6 +61,9 @@ correct_batch_effect<-function(experiment, model, method=c('ComBat','RUV','MNN')
 }
 
 get(load(opt$input))$rnaseq->experimentSummary
+
+experimentSummary$batch <- droplevels(experimentSummary$batch)
+
 
 batch_corrected<-correct_batch_effect(experiment = experimentSummary, model= ~organism_part, method='ComBat')
 
