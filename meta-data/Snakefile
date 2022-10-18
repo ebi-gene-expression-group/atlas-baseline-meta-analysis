@@ -41,19 +41,21 @@ def get_outputs():
     outputs = []
     if 'target' in config:
         if config['target'] == TARGET_CURATION:
-            outputs = [f"tmp_results/{new_accession}.sdrf.txt"]
+            outputs = [f"tmp_results/data/{new_accession}/{new_accession}.sdrf.txt"]
         elif config['target'] == TARGET_ANALYSIS_POST_CURATION:
-            outputs.extend([f"tmp_results/{new_accession}{x}" for x in DATA_SUFFIXES])
+            outputs.extend([f"tmp_results/data/{new_accession}/{new_accession}{x}" for x in DATA_SUFFIXES])
     else:
-        outputs = [f"tmp_results/{new_accession}.sdrf.txt",
-                    f"tmp_results/{new_accession}.condensed.sdrf.tsv",
-                    f"tmp_results/{new_accession}-configuration.xml"]
+        outputs = [f"tmp_results/data/{new_accession}/{new_accession}.sdrf.txt",
+                    f"tmp_results/data/{new_accession}/{new_accession}.condensed.sdrf.tsv",
+                    f"tmp_results/data/{new_accession}/{new_accession}-configuration.xml"]
 
         if "retrieve_data" in config:
-            outputs.extend([f"tmp_results/{new_accession}{x}" for x in DATA_SUFFIXES])
+            outputs.extend([f"tmp_results/data/{new_accession}/{new_accession}{x}" for x in DATA_SUFFIXES])
 
     if "species" in config:
-        outputs.extend([f"tmp_results/{new_accession}.gtf"])
+        outputs.extend([f"tmp_results/data/{new_accession}/{new_accession}.gtf"])
+
+    outputs.extend([f"tmp_results/data/{new_accession}/{new_accession}-analysis-methods.tsv"])
 
     return outputs
 
@@ -88,7 +90,7 @@ rule retrieve_data:
     shell:
         """
         mkdir -p {output.data_path}
-        retrieve_data.py -i {output.data_path} -a {params.accessions} -f {params.optionals} 2> {log}
+        retrieve_data.py -i {output.data_path} -a {params.accessions} -f {params.optionals} -d 2> {log}
         """
 
 def existing_or_retrieve(type):
@@ -120,17 +122,17 @@ rule merge_condensed:
         data=existing_or_retrieve("data")
         #data=rules.retrieve_data.output.data
     output:
-        merged_condensed="tmp_results/{new_acc}.condensed.sdrf.tsv",
-        selected_studies="tmp_results/{new_acc}.selected_studies.txt"
+        merged_condensed="tmp_results/data/{new_acc}/{new_acc}.condensed.sdrf.tsv",
+        selected_studies="tmp_results/data/{new_acc}/{new_acc}.selected_studies.txt"
     log: "logs/{new_acc}.log"
     conda:
         "envs/MAGETab-merger.yaml"
     shell:
         """
-        mkdir -p tmp_results;
+        mkdir -p tmp_results/data/{wildcards.new_acc};
         merge_condensed_sdrfs.py -d '{input.path}' \
           -a '{params.accessions}' \
-          -o tmp_results -n '{wildcards.new_acc}' \
+          -o tmp_results/data/{wildcards.new_acc} -n '{wildcards.new_acc}' \
           -b '{params.batch}' -c '{params.covariate}' \
           --covariate-type '{params.covariate_type}' \
           {params.optionals} 2>> {log}
@@ -142,7 +144,7 @@ rule merge_sdrfs:
         #path=rules.retrieve_data.output.data_path
         path=existing_or_retrieve("path")
     output:
-        merged_sdrf="tmp_results/{new_acc}.sdrf.txt"
+        merged_sdrf="tmp_results/data/{new_acc}/{new_acc}.sdrf.txt"
     log: "logs/{new_acc}.merge-SDRFs.log"
     conda:
         "envs/MAGETab-merger.yaml"
@@ -164,7 +166,7 @@ rule merge_baseline_configuration_xmls:
     params:
         input_path=rules.retrieve_data.output.data_path
     output:
-        merged_xml="tmp_results/{new_acc}-configuration.xml"
+        merged_xml="tmp_results/data/{new_acc}/{new_acc}-configuration.xml"
     log: "logs/{new_acc}.log"
     conda:
         "envs/MAGETab-merger.yaml"
@@ -177,14 +179,14 @@ rule merge_baseline_configuration_xmls:
         done
         merge_baseline_configuration_xmls.py \
             --accessions-file {input.accessions_file} \
-            -o tmp_results \
+            -o tmp_results/data/{wildcards.new_acc} \
             -n {wildcards.new_acc} -x tmp_configs 2> {log}
         rm -rf tmp_configs
         """
 
 rule retrieve_gtf:
     output:
-        gtf="tmp_results/{new_acc}.gtf"
+        gtf="tmp_results/data/{new_accession}/{new_acc}.gtf"
     params:
         species=config["species"],
         tag="current"
@@ -192,9 +194,9 @@ rule retrieve_gtf:
         "envs/refgenie.yaml"
     shell:
         """
-        genome=$(refgenie list --skip-read-lock | grep "{params.species}[, ]" | grep 'gtf' | awk -F' ' '{{ print $2 }}' | sed 's/,//g')
+        genome=$(refgenie list --skip-read-lock | grep -m 1 "{params.species}" | grep 'gtf' | awk -F' ' '{{ print $2 }}' | sed 's/,//g')
         gtf_path=$(refgenie seek --skip-read-lock $genome/ensembl_gtf:{params.tag})
-        ln -s $gtf_path {output.gtf}
+        gunzip -c $gtf_path > {output.gtf}
         """
 
 rule merge_data:
@@ -208,14 +210,27 @@ rule merge_data:
     conda:
         "envs/MAGETab-merger.yaml"
     output:
-        merged_data="tmp_results/{new_acc}{data_suffix}"
+        merged_data="tmp_results/data/{new_acc}/{new_acc}{data_suffix}"
     shell:
         """
         rm -rf tmp_data{wildcards.data_suffix}
         mkdir -p tmp_data{wildcards.data_suffix}
         for acc in $(cat {input.accessions_file} | tr ',' ' '); do
-            ln -s {params.input_path}/$acc/$acc{wildcards.data_suffix} tmp_data{wildcards.data_suffix}/$acc{wildcards.data_suffix}
+            ln {params.input_path}/$acc/$acc{wildcards.data_suffix} tmp_data{wildcards.data_suffix}/$acc{wildcards.data_suffix}
         done
         merge_data.py -d tmp_data{wildcards.data_suffix} -s='{wildcards.data_suffix}' -o {output.merged_data} -c {input.merged_condensed} -i '{params.index_column}' --remove-rows-with-empty true 2> {log}
         rm -rf tmp_data{wildcards.data_suffix}
+	"""
+
+rule analysis_method:
+    output:
+        tsv="tmp_results/data/{new_acc}/{new_acc}-analysis-methods.tsv"
+    params:
+        accessions=config["accessions"],
+        new_accession=config["new_accession"] 
+    shell:
+        """
+        echo "Pipeline version\t<a href=\"https://github.com/ebi-gene-expression-group/atlas-baseline-meta-analysis/\">Atlas baseline meta-analysis</a>" > {output}
+        echo "Input Accessions\t" {params.accessions} >> {output}
+        echo "Output accession\t" {params.new_accession} >> {output}
         """
