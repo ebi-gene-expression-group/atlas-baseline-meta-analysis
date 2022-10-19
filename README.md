@@ -10,7 +10,7 @@ To merge the metadata of datasets, we use within a Snakemake workflow the [MAGE-
 
 from an starting list of Atlas baseline experiment accessions. The process of dealing with the metadata will filter out datasets that cannot be merged due to experimental design or metadata limitations.
 
-To run the metadata part you will need to specify the following environment variables:
+To run the metadata part you will need to specify the following environment variables: **Not using Environment variables in new setup, but using Snakemake config instead.**
 
 ```
 # The accessions of experiments that you want to merge
@@ -63,7 +63,7 @@ E-MTAB-4342-transcripts-raw-counts.tsv.undecorated  E-MTAB-4342.sdrf.txt
 ```
 
 So, as a summary, each accesion in `$ACCESSIONS` is expected to have its own directory named after it, and each directory contain the raw-counts (genes and transcripts), IDF, SDRF and condensed SDRF, with the name structure shown above.
-
+~~
 ### Running the metadata merge workflow
 
 ```
