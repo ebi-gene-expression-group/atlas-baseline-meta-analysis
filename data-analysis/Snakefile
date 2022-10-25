@@ -15,7 +15,7 @@ rule copy_genes_data:
     shell:
         "cp {input.raw_counts_file} {output.labeled_genes_raw_counts}"
 
-rule lengths:
+rule gene_feature_lengths_in_R:
     input:
         gtf=config['cache_path']+"/data/{accession}/{accession}.gtf"
     output:
