@@ -1,5 +1,7 @@
 ANNOT_OBJECTS=["gene", "transcript"]
 METRICS=['tpm', 'fpkm']
+# set minimum snakemake version
+min_version("6.6.1")
 
 rule all:
     input:
