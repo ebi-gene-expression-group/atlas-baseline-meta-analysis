@@ -69,6 +69,42 @@ def get_index_column(suffix):
     return "Gene ID"
 
 
+def filter_accessions_by_exp_type_and_species(wildcards):
+    from xml.dom import minidom
+    import csv
+    accessions = config["accessions"].split(",")
+    selected_accessions = []
+
+    for accession in accessions:
+        flag = False
+        xmldoc = minidom.parse(
+            config['cache_path']+"/data/"+accession+"/"+accession+"-configuration.xml"
+        )
+        exp_type = []
+        config_tag = xmldoc.getElementsByTagName("configuration")
+        for i in config_tag:
+            if "rnaseq" in i.getAttribute("experimentType"):
+                flag = True
+            else:
+                print(accession+" has been discarded for not being RNA-Seq experiment.")
+        
+        sdrf = config['cache_path']+"/data/"+accession+"/"+accession+".condensed-sdrf.tsv"
+        with open(sdrf) as file:
+            tsv_file = csv.reader(file, delimiter="\t")
+
+            for line in tsv_file:
+                if line[4] == "organism" and line[5].lower().replace(" ","_") == config['species'].lower().replace(" ","_"):
+                     if flag == True:
+                         selected_accessions.append(accession)
+                         break
+                     else:
+                         print(accession+" has been discarded for not being the same species ("+line[3]+") as config species ("+config["species"]+")")
+                         break
+    
+    return ','.join(selected_accessions)
+
+
+
 wildcard_constraints:
     new_acc="E-\D+-\d+",
     data_suffix=".*raw-counts.*"
@@ -111,7 +147,7 @@ def existing_or_retrieve(type):
 
 rule merge_condensed:
     params:
-        accessions=config["accessions"],
+        accessions=filter_accessions_by_exp_type_and_species,
         batch=config["batch"],
         covariate=config["covariate"],
         covariate_type=config["covariate_type"],
