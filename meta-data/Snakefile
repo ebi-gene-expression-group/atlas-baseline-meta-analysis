@@ -104,6 +104,21 @@ def filter_accessions_by_exp_type_and_species(wildcards):
     return ','.join(selected_accessions)
 
 
+def existing_or_retrieve(type):
+    """
+    If config input_path is set, then no data retrieval takes
+    place as the operator has sourced all needed files.
+    """
+    if "input_path" not in config:
+        if type == "path":
+            return rules.retrieve_data.output.data_path
+        else:
+            return rules.retrieve_data.output.data
+    else:
+        if type == "path":
+            return config["input_path"]
+        else:
+            return []
 
 wildcard_constraints:
     new_acc="E-\D+-\d+",
@@ -129,21 +144,6 @@ rule retrieve_data:
         retrieve_data.py -i {output.data_path} -a {params.accessions} -f {params.optionals} -d 2> {log}
         """
 
-def existing_or_retrieve(type):
-    """
-    If config input_path is set, then no data retrieval takes
-    place as the operator has sourced all needed files.
-    """
-    if "input_path" not in config:
-        if type == "path":
-            return rules.retrieve_data.output.data_path
-        else:
-            return rules.retrieve_data.output.data
-    else:
-        if type == "path":
-            return config["input_path"]
-        else:
-            return []
 
 rule merge_condensed:
     params:
