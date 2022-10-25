@@ -1,5 +1,5 @@
 # Atlas baseline meta-analysis
-
+The repository contains workflows for metadata generation and data analysis.
 ## Metadata
 
 To merge the metadata of datasets, we use within a Snakemake workflow the [MAGE-Tab-merger](https://pypi.org/project/MAGE-Tab-merger/) package to produce:
