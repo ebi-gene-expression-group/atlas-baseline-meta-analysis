@@ -43,7 +43,7 @@ rule quantile_normalize:
         "envs/ma_quantile_transform.yaml"
     shell:
         """
-        {workflow.basedir}/bin/quantile_normalize.sh \
+        {workflow.basedir}/bin/quantile_normalize_meta.sh \
             -c {input.configuration_file} \
             -s {input.raw_counts_file} \
             -d {output.quantile_result}
