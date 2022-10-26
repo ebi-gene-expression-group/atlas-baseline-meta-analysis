@@ -112,8 +112,10 @@ def existing_or_retrieve(type):
     if "input_path" not in config:
         if type == "path":
             return rules.retrieve_data.output.data_path
-        else:
+        elif type == "data":
             return rules.retrieve_data.output.data
+        else:
+            print("Incompatible path type provided and input_path is not set in config.")
     else:
         if type == "path":
             return config["input_path"]
