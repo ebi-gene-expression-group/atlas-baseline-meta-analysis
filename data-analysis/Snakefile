@@ -1,6 +1,7 @@
 ANNOT_OBJECTS=["gene", "transcript"]
 METRICS=['tpm', 'fpkm']
 # set minimum snakemake version
+from snakemake.utils import min_version
 min_version("6.6.1")
 
 rule all:
@@ -25,12 +26,13 @@ rule gene_feature_lengths_in_R:
 	trans_length=config['cache_path']+"/data/{accession}/lengths/{accession}.lengths.trans_length.tsv"
     params:
         lengths=config['cache_path']+"/data/{accession}/lengths/{accession}.lengths"
+    log: config['cache_path']+"/data/{accession}/logs/{accession}.lengths.log"
     conda:
         "envs/ma_irap_components.yaml"
     threads: 2
     shell:
         """
-	irap_gtf2featlength --gtf {input.gtf} --out {params.lengths} --cores {threads}
+	irap_gtf2featlength --gtf {input.gtf} --out {params.lengths} --cores {threads} > {log}
         """
 
 rule quantile_normalize:
@@ -39,6 +41,7 @@ rule quantile_normalize:
         raw_counts_file=config['cache_path']+"/data/{accession}/{accession}-{genes_or_transcripts}s-raw-counts.tsv.undecorated"
     output:
         quantile_result=config['cache_path']+"/data/{accession}/{accession}-{genes_or_transcripts}s-quantile-counts.tsv"
+    log: config['cache_path']+"/data/{accession}/logs/{accession}-{genes_or_transcripts}s-counts.log"
     conda:
         "envs/ma_quantile_transform.yaml"
     shell:
@@ -46,7 +49,7 @@ rule quantile_normalize:
         {workflow.basedir}/bin/quantile_normalize_meta.sh \
             -c {input.configuration_file} \
             -s {input.raw_counts_file} \
-            -d {output.quantile_result}
+            -d {output.quantile_result} > {log}
         """
 
 rule transform2R:
@@ -61,6 +64,7 @@ rule transform2R:
         "envs/ma_quantile_transform.yaml"
     params:
         batch=config["batch"]
+    log: config['cache_path']+"/data/{accession}/logs/{accession}-{genes_or_transcripts}s-summarizedExp.log"
     shell:
         """
         {workflow.basedir}/bin/transform2R.r \
@@ -70,7 +74,7 @@ rule transform2R:
             --methods {input.methods_file} \
             --batch {params.batch} \
 	    --remove_single_batch_genes \
-            --output {output.rdata}
+            --output {output.rdata} > {log}
         """
 
 rule batch_correction_v2:
@@ -81,28 +85,30 @@ rule batch_correction_v2:
         tsv_corrected_counts=config['cache_path']+"/data/{accession}/{accession}-{genes_or_transcripts}-corrected_counts.tsv"
     conda:
         "envs/ma_batch_correct_combat.yaml"
+    log: config['cache_path']+"/data/{accession}/logs/{accession}-{genes_or_transcripts}-corrected_counts.log"
     shell:
         """
         {workflow.basedir}/bin/batch_correction_v2.R \
             -i {input.counts} \
             --output {output.summarized_rdata} \
-            --tsv_corrected_counts {output.tsv_corrected_counts}
+            --tsv_corrected_counts {output.tsv_corrected_counts} > {log}
         """
 
 rule irap_raw2metric:
     input:
         counts=rules.batch_correction_v2.output.tsv_corrected_counts,
-        lengths=rules.lengths.output.rdata
+        lengths=rules.gene_feature_lengths_in_R.output.rdata
     output:
         corrected=config['cache_path']+"/data/{accession}/{accession}-{genes_or_transcripts}s-corrected-{metric}s"
     conda:
         "envs/ma_irap_components.yaml"
+    log: config['cache_path']+"/data/{accession}/logs/{accession}-{genes_or_transcripts}s-corrected-{metric}s.log"
     shell:
         """
 	irap_raw2metric -i {input.counts} \
             --lengths {input.lengths} \
             --feature {wildcards.genes_or_transcripts} \
             --metric {wildcards.metric} \
-            --out {output.corrected}
+            --out {output.corrected} > {log}
         """
 
