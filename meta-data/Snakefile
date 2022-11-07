@@ -232,7 +232,7 @@ rule retrieve_gtf:
         "envs/refgenie.yaml"
     shell:
         """
-        genome=$(refgenie list --skip-read-lock | grep -m 1 "{params.species}" | grep 'gtf' | awk -F' ' '{{ print $2 }}' | sed 's/,//g')
+        genome=$(refgenie list --skip-read-lock | grep "{params.species}" | head -1 | grep 'gtf' | awk -F' ' '{{ print $2 }}' | sed 's/,//g')
         gtf_path=$(refgenie seek --skip-read-lock $genome/ensembl_gtf:{params.tag})
         gunzip -c $gtf_path > {output.gtf}
         """
