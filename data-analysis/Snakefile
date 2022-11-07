@@ -95,6 +95,9 @@ rule batch_correction_v2:
         """
 
 rule irap_raw2metric:
+    """
+    Generates TPM and FPKM metrics from counts for accessions 
+    """
     input:
         counts=rules.batch_correction_v2.output.tsv_corrected_counts,
         lengths=rules.gene_feature_lengths_in_R.output.rdata
