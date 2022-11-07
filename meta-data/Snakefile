@@ -265,10 +265,14 @@ rule analysis_method:
         tsv="tmp_results/data/{new_acc}/{new_acc}-analysis-methods.tsv"
     params:
         accessions=config["accessions"],
-        new_accession=config["new_accession"] 
+	filtered_accession=filter_accessions_by_exp_type_and_species,
+        new_accession=config["new_accession"], 
+	species=config["species"]
     shell:
         """
         echo "Pipeline version\t<a href=\"https://github.com/ebi-gene-expression-group/atlas-baseline-meta-analysis/\">Atlas baseline meta-analysis</a>" > {output}
         echo "Input Accessions\t" {params.accessions} >> {output}
+	echo "Accession used in Analysis\t" {params.filtered_accession} >> {output}
         echo "Output accession\t" {params.new_accession} >> {output}
+	echo "Retrieved GTF using RefGenie for the species\t" {params.species} >> {output}
         """
