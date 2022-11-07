@@ -1,0 +1,3 @@
+[submodule "data-analysis/bin/atlas-bash-util"]
+	path = data-analysis/bin/atlas-bash-util
+	url = https://github.com/ebi-gene-expression-group/atlas-bash-util
