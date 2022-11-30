@@ -35,7 +35,7 @@ done
 mkdir -p "$(dirname $path_to_destination)"
 
 tmp_files="$path_to_destination.$(date -u +"%Y-%m-%d_%H:%M").tmp"
-#trap 'rm -f ${tmp_files}.*' INT TERM EXIT
+trap 'rm -f ${tmp_files}.*' INT TERM EXIT
 
 tmp_config_tsv="$tmp_files.config.tsv"
 tmp_config_log="$tmp_files.config.log"
