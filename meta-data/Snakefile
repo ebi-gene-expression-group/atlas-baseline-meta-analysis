@@ -41,22 +41,22 @@ def get_outputs():
     outputs = []
     if 'target' in config:
         if config['target'] == TARGET_CURATION:
-            outputs = [f"tmp_results/data/{new_accession}/{new_accession}.sdrf.txt"]
+            outputs = [config["output_path"]+f"/data/{new_accession}/{new_accession}.sdrf.txt"]
         elif config['target'] == TARGET_ANALYSIS_POST_CURATION:
-            outputs.extend([f"tmp_results/data/{new_accession}/{new_accession}{x}" for x in DATA_SUFFIXES])
+            outputs.extend([config["output_path"]+f"/data/{new_accession}/{new_accession}{x}" for x in DATA_SUFFIXES])
     else:
-        outputs = [f"tmp_results/data/{new_accession}/{new_accession}.sdrf.txt",
-                    f"tmp_results/data/{new_accession}/{new_accession}.condensed.sdrf.tsv",
-                    f"tmp_results/data/{new_accession}/{new_accession}-configuration.xml"]
+        outputs = [config["output_path"]+f"/data/{new_accession}/{new_accession}.sdrf.txt",
+                    config["output_path"]+f"/data/{new_accession}/{new_accession}.condensed.sdrf.tsv",
+                    config["output_path"]+f"/data/{new_accession}/{new_accession}-configuration.xml"]
 
         if "retrieve_data" in config:
-            outputs.extend([f"tmp_results/data/{new_accession}/{new_accession}{x}" for x in DATA_SUFFIXES])
+            outputs.extend([config["output_path"]+f"/data/{new_accession}/{new_accession}{x}" for x in DATA_SUFFIXES])
 
     if "species" in config:
-        outputs.extend([f"tmp_results/data/{new_accession}/{new_accession}.gtf"])
+        outputs.extend([config["output_path"]+f"/data/{new_accession}/{new_accession}.gtf"])
 
-    outputs.extend([f"tmp_results/data/{new_accession}/{new_accession}-analysis-methods.tsv"])
-
+    outputs.extend([config["output_path"]+f"/data/{new_accession}/{new_accession}-analysis-methods.tsv"])
+    print(outputs)
     return outputs
 
 def get_index_column(suffix):
@@ -153,24 +153,25 @@ rule merge_condensed:
         batch=config["batch"],
         covariate=config["covariate"],
         covariate_type=config["covariate_type"],
-        optionals=optionals_merge()
+        optionals=optionals_merge(),
+        outdir=config["output_path"]+"/data/{new_acc}"
     input:
         path=existing_or_retrieve("path"),
         #path=rules.retrieve_data.output.data_path,
         data=existing_or_retrieve("data")
         #data=rules.retrieve_data.output.data
     output:
-        merged_condensed="tmp_results/data/{new_acc}/{new_acc}.condensed.sdrf.tsv",
-        selected_studies="tmp_results/data/{new_acc}/{new_acc}.selected_studies.txt"
+        merged_condensed=config["output_path"]+"/data/{new_acc}/{new_acc}.condensed.sdrf.tsv",
+        selected_studies=config["output_path"]+"/data/{new_acc}/{new_acc}.selected_studies.txt"
     log: "logs/{new_acc}.log"
     conda:
         "envs/MAGETab-merger.yaml"
     shell:
         """
-        mkdir -p tmp_results/data/{wildcards.new_acc};
+        mkdir -p {params.outdir};
         merge_condensed_sdrfs.py -d '{input.path}' \
           -a '{params.accessions}' \
-          -o tmp_results/data/{wildcards.new_acc} -n '{wildcards.new_acc}' \
+          -o {params.outdir} -n '{wildcards.new_acc}' \
           -b '{params.batch}' -c '{params.covariate}' \
           --covariate-type '{params.covariate_type}' \
           {params.optionals} 2>> {log}
@@ -182,7 +183,7 @@ rule merge_sdrfs:
         #path=rules.retrieve_data.output.data_path
         path=existing_or_retrieve("path")
     output:
-        merged_sdrf="tmp_results/data/{new_acc}/{new_acc}.sdrf.txt"
+        merged_sdrf=config["output_path"]+"/data/{new_acc}/{new_acc}.sdrf.txt"
     log: "logs/{new_acc}.merge-SDRFs.log"
     conda:
         "envs/MAGETab-merger.yaml"
@@ -202,9 +203,10 @@ rule merge_baseline_configuration_xmls:
     input:
         accessions_file=rules.merge_condensed.output.selected_studies
     params:
-        input_path=rules.retrieve_data.output.data_path
+        input_path=rules.retrieve_data.output.data_path,
+        output_path=config["output_path"]+"/data/{new_acc}"
     output:
-        merged_xml="tmp_results/data/{new_acc}/{new_acc}-configuration.xml"
+        merged_xml=config["output_path"]+"/data/{new_acc}/{new_acc}-configuration.xml"
     log: "logs/{new_acc}.log"
     conda:
         "envs/MAGETab-merger.yaml"
@@ -217,14 +219,14 @@ rule merge_baseline_configuration_xmls:
         done
         merge_baseline_configuration_xmls.py \
             --accessions-file {input.accessions_file} \
-            -o tmp_results/data/{wildcards.new_acc} \
+            -o {params.output_path} \
             -n {wildcards.new_acc} -x tmp_configs 2> {log}
         rm -rf tmp_configs
         """
 
 rule retrieve_gtf:
     output:
-        gtf="tmp_results/data/{new_accession}/{new_acc}.gtf"
+        gtf=config["output_path"]+"/data/{new_accession}/{new_acc}.gtf"
     params:
         species=config["species"],
         tag="current"
@@ -248,7 +250,7 @@ rule merge_data:
     conda:
         "envs/MAGETab-merger.yaml"
     output:
-        merged_data="tmp_results/data/{new_acc}/{new_acc}{data_suffix}"
+        merged_data=config["output_path"]+"/data/{new_acc}/{new_acc}{data_suffix}"
     shell:
         """
         rm -rf tmp_data{wildcards.data_suffix}
@@ -262,7 +264,7 @@ rule merge_data:
 
 rule analysis_method:
     output:
-        tsv="tmp_results/data/{new_acc}/{new_acc}-analysis-methods.tsv"
+        tsv=config["output_path"]+"/data/{new_acc}/{new_acc}-analysis-methods.tsv"
     params:
         accessions=config["accessions"],
 	filtered_accession=filter_accessions_by_exp_type_and_species,

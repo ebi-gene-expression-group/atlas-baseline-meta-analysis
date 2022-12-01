@@ -77,7 +77,7 @@ Example run:
 ```
 cd desired/working/directory
 # start snakemake environment - possibly conda activate snakemake
-snakemake --snakefile <PATH_TO_THIS_REPO>/meta-data/Snakefile --cores 2 --use-conda --conda-frontend mamba --config accessions=E-GEOD-53197,E-GEOD-55482,E-CURD-31,E-GEOD-52806,E-GEOD-64740 new_accession=E-SUPR-1 cache_path=cache batch=study covariate="organism part" covariate_type=characteristic species="arabidopsis_thaliana" retrieve_data=True
+snakemake --snakefile <PATH_TO_THIS_REPO>/meta-data/Snakefile --cores 2 --use-conda --conda-frontend mamba --config accessions=E-GEOD-53197,E-GEOD-55482,E-CURD-31,E-GEOD-52806,E-GEOD-64740 new_accession=E-SUPR-1 cache_path=cache batch=study covariate="organism part" covariate_type=characteristic species="arabidopsis_thaliana" retrieve_data=True output_path=output
 ```
 
 ### Results
@@ -92,6 +92,10 @@ E-SUPR-1.gtf                                    E-SUPR-1-analysis-methods.tsv
 ```
 
 Most files are self explanatory, the `selected_studies.txt` files contains a comma separate list of the original accessions used.
+
+### Jenkins job
+
+Jenkins job for this part of workflow is at http://gene-expression.ebi.ac.uk/jenkins/job/bulk_baseline_meta_analysis_dataprep/ 
 
 
 ## Data Analysis
