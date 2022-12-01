@@ -6,27 +6,27 @@ min_version("6.6.1")
 
 rule all:
     input:
-        corrected=expand(config['cache_path']+"/data/{accession}/{accession}-{genes_or_transcripts}s-corrected-{metric}s",accession=config["accession"],genes_or_transcripts=ANNOT_OBJECTS, metric=METRICS)
+        corrected=expand(config['output_path']+"/data/{accession}/{accession}-{genes_or_transcripts}s-corrected-{metric}s",accession=config["accession"],genes_or_transcripts=ANNOT_OBJECTS, metric=METRICS)
 
 rule copy_genes_data:
     input:
-        raw_counts_file=config['cache_path']+"/data/{accession}/{accession}-raw-counts.tsv.undecorated"
+        raw_counts_file=config['output_path']+"/data/{accession}/{accession}-raw-counts.tsv.undecorated"
     output:
-        labeled_genes_raw_counts=config['cache_path']+"/data/{accession}/{accession}-genes-raw-counts.tsv.undecorated"
+        labeled_genes_raw_counts=config['output_path']+"/data/{accession}/{accession}-genes-raw-counts.tsv.undecorated"
     shell:
         "cp {input.raw_counts_file} {output.labeled_genes_raw_counts}"
 
 rule gene_feature_lengths_in_R:
     input:
-        gtf=config['cache_path']+"/data/{accession}/{accession}.gtf"
+        gtf=config['output_path']+"/data/{accession}/{accession}.gtf"
     output:
-        rdata=config['cache_path']+"/data/{accession}/lengths/{accession}.lengths.Rdata",
-	gene_lengths=config['cache_path']+"/data/{accession}/lengths/{accession}.lengths.gene_length.tsv",
-	exon_lentgh=config['cache_path']+"/data/{accession}/lengths/{accession}.lengths.exon_length.tsv",
-	trans_length=config['cache_path']+"/data/{accession}/lengths/{accession}.lengths.trans_length.tsv"
+        rdata=config['output_path']+"/data/{accession}/lengths/{accession}.lengths.Rdata",
+	gene_lengths=config['output_path']+"/data/{accession}/lengths/{accession}.lengths.gene_length.tsv",
+	exon_lentgh=config['output_path']+"/data/{accession}/lengths/{accession}.lengths.exon_length.tsv",
+	trans_length=config['output_path']+"/data/{accession}/lengths/{accession}.lengths.trans_length.tsv"
     params:
-        lengths=config['cache_path']+"/data/{accession}/lengths/{accession}.lengths"
-    log: config['cache_path']+"/data/{accession}/logs/{accession}.lengths.log"
+        lengths=config['output_path']+"/data/{accession}/lengths/{accession}.lengths"
+    log: config['output_path']+"/logs/{accession}/{accession}.lengths.log"
     conda:
         "envs/ma_irap_components.yaml"
     threads: 2
@@ -37,11 +37,11 @@ rule gene_feature_lengths_in_R:
 
 rule quantile_normalize:
     input:
-        configuration_file=config['cache_path']+"/data/{accession}/{accession}-configuration.xml",
-        raw_counts_file=config['cache_path']+"/data/{accession}/{accession}-{genes_or_transcripts}s-raw-counts.tsv.undecorated"
+        configuration_file=config['output_path']+"/data/{accession}/{accession}-configuration.xml",
+        raw_counts_file=config['output_path']+"/data/{accession}/{accession}-{genes_or_transcripts}s-raw-counts.tsv.undecorated"
     output:
-        quantile_result=config['cache_path']+"/data/{accession}/{accession}-{genes_or_transcripts}s-quantile-counts.tsv"
-    log: config['cache_path']+"/data/{accession}/logs/{accession}-{genes_or_transcripts}s-counts.log"
+        quantile_result=config['output_path']+"/data/{accession}/{accession}-{genes_or_transcripts}s-quantile-counts.tsv"
+    log: config['output_path']+"/logs/{accession}/{accession}-{genes_or_transcripts}s-counts.log"
     conda:
         "envs/ma_quantile_transform.yaml"
     shell:
@@ -55,16 +55,16 @@ rule quantile_normalize:
 rule transform2R:
     input:
         quantile_result=rules.quantile_normalize.output.quantile_result,
-        sdrf=config['cache_path']+"/data/{accession}/{accession}.sdrf.txt",
+        sdrf=config['output_path']+"/data/{accession}/{accession}.sdrf.txt",
         configuration_file=rules.quantile_normalize.input.configuration_file,
-        methods_file=config['cache_path']+"/data/{accession}/{accession}-analysis-methods.tsv"
+        methods_file=config['output_path']+"/data/{accession}/{accession}-analysis-methods.tsv"
     output:
-        rdata=config['cache_path']+"/data/{accession}/{accession}-{genes_or_transcripts}_summarizedExp.rdata"
+        rdata=config['output_path']+"/data/{accession}/{accession}-{genes_or_transcripts}_summarizedExp.rdata"
     conda:
         "envs/ma_quantile_transform.yaml"
     params:
         batch=config["batch"]
-    log: config['cache_path']+"/data/{accession}/logs/{accession}-{genes_or_transcripts}s-summarizedExp.log"
+    log: config['output_path']+"/logs/{accession}/{accession}-{genes_or_transcripts}s-summarizedExp.log"
     shell:
         """
         {workflow.basedir}/bin/transform2R.r \
@@ -81,13 +81,13 @@ rule batch_correction_v2:
     input:
         counts=rules.transform2R.output.rdata
     output:
-        summarized_rdata=config['cache_path']+"/data/{accession}/{accession}-{genes_or_transcripts}-corrected_summarizedExp.rdata",
-        tsv_corrected_counts=config['cache_path']+"/data/{accession}/{accession}-{genes_or_transcripts}-corrected_counts.tsv"
+        summarized_rdata=config['output_path']+"/data/{accession}/{accession}-{genes_or_transcripts}-corrected_summarizedExp.rdata",
+        tsv_corrected_counts=config['output_path']+"/data/{accession}/{accession}-{genes_or_transcripts}-corrected_counts.tsv"
     params:
         covariate=config['covariate']
     conda:
         "envs/ma_batch_correct_combat.yaml"
-    log: config['cache_path']+"/data/{accession}/logs/{accession}-{genes_or_transcripts}-corrected_counts.log"
+    log: config['output_path']+"/logs/{accession}/{accession}-{genes_or_transcripts}-corrected_counts.log"
     shell:
         """
         {workflow.basedir}/bin/batch_correction_v2.R \
@@ -105,10 +105,10 @@ rule irap_raw2metric:
         counts=rules.batch_correction_v2.output.tsv_corrected_counts,
         lengths=rules.gene_feature_lengths_in_R.output.rdata
     output:
-        corrected=config['cache_path']+"/data/{accession}/{accession}-{genes_or_transcripts}s-corrected-{metric}s"
+        corrected=config['output_path']+"/data/{accession}/{accession}-{genes_or_transcripts}s-corrected-{metric}s"
     conda:
         "envs/ma_irap_components.yaml"
-    log: config['cache_path']+"/data/{accession}/logs/{accession}-{genes_or_transcripts}s-corrected-{metric}s.log"
+    log: config['output_path']+"/logs/{accession}/{accession}-{genes_or_transcripts}s-corrected-{metric}s.log"
     shell:
         """
 	irap_raw2metric -i {input.counts} \
