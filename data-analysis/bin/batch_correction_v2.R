@@ -11,6 +11,13 @@ option_list = list(
     help = "Path to rdata."
   ),
   make_option(
+    c("-c", "--covariate"),
+    action = "store",
+    default = "organism_part",
+    type = 'character',
+    help = "Covariate for batch correction, Default: organism_part"
+  ),
+  make_option(
     c("--output"),
     action = "store",
     default = NA,

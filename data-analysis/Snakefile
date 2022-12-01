@@ -83,6 +83,8 @@ rule batch_correction_v2:
     output:
         summarized_rdata=config['cache_path']+"/data/{accession}/{accession}-{genes_or_transcripts}-corrected_summarizedExp.rdata",
         tsv_corrected_counts=config['cache_path']+"/data/{accession}/{accession}-{genes_or_transcripts}-corrected_counts.tsv"
+    params:
+        covariate=config['covariate']
     conda:
         "envs/ma_batch_correct_combat.yaml"
     log: config['cache_path']+"/data/{accession}/logs/{accession}-{genes_or_transcripts}-corrected_counts.log"
@@ -90,6 +92,7 @@ rule batch_correction_v2:
         """
         {workflow.basedir}/bin/batch_correction_v2.R \
             -i {input.counts} \
+            -c {params.covariate} \
             --output {output.summarized_rdata} \
             --tsv_corrected_counts {output.tsv_corrected_counts} > {log}
         """
