@@ -141,3 +141,18 @@ This will create results in two directories:
 
 - tmp_results: main results, with all calculations for the merged dataset.
 - lengths: where lengths per gene, exon and transcripts are produced, based on the reference GTF file provided. These are used to normalise to TPMs and FPKMs.
+
+### Jenkins job
+
+Jenkins job for this part of workflow is at http://gene-expression.ebi.ac.uk/jenkins/job/bulk_baseline_meta_analysis/
+
+# Known bug
+
+## Covariate
+
+Meta-data pipeline needs covariate without underscore, i.e. organism part
+Data analysis pipeline needs covariate with underscore, i.e. organism_part (configurable covariate will be implemented in near future)
+
+## RefGenie
+
+Jenkins fails to fetch GTF using RefGenie, works fine on CLI with same command
