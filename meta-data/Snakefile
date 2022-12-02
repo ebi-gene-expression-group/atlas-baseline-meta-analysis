@@ -56,7 +56,6 @@ def get_outputs():
         outputs.extend([config["output_path"]+f"/data/{new_accession}/{new_accession}.gtf"])
 
     outputs.extend([config["output_path"]+f"/data/{new_accession}/{new_accession}-analysis-methods.tsv"])
-    print(outputs)
     return outputs
 
 def get_index_column(suffix):
