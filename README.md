@@ -128,13 +128,13 @@ then run:
 
 ```
 snakemake -p --snakefile <PATH_TO_THIS_REPO>/data-analysis/Snakefile --cores 2 --use-conda --conda-frontend mamba \
-  --config accession=<ACCESSION> output_path=<path for temp files> batch=<batch>
+  --config accession=<ACCESSION> output_path=<path for temp files> batch=<batch> covariate=<covariate>
 ```
 
 example run:
 
 ```
-snakemake -p --snakefile <PATH_TO_THIS_REPO>/data-analysis/Snakefile --cores 2 --use-conda --conda-frontend conda --config accession=E-SUPR-1 output_path=tmp_results batch=Study
+snakemake -p --snakefile <PATH_TO_THIS_REPO>/data-analysis/Snakefile --cores 2 --use-conda --conda-frontend conda --config accession=E-SUPR-1 output_path=tmp_results batch=Study covariate=organism_part
 ```
 
 This will create results in two directories:
@@ -151,7 +151,7 @@ Jenkins job for this part of workflow is at http://gene-expression.ebi.ac.uk/jen
 ## Covariate
 
 Meta-data pipeline needs covariate without underscore, i.e. organism part
-Data analysis pipeline needs covariate with underscore, i.e. organism_part (configurable covariate will be implemented in near future)
+Data analysis pipeline needs covariate with underscore, i.e. organism_part 
 
 ## RefGenie
 

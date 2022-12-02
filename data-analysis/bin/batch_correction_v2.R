@@ -13,7 +13,7 @@ option_list = list(
   make_option(
     c("-c", "--covariate"),
     action = "store",
-    default = "organism_part",
+    default = "~organism_part",
     type = 'character',
     help = "Covariate for batch correction, Default: organism_part"
   ),
@@ -72,7 +72,7 @@ get(load(opt$input))$rnaseq->experimentSummary
 experimentSummary$batch <- droplevels(experimentSummary$batch)
 
 
-batch_corrected<-correct_batch_effect(experiment = experimentSummary, covariate= ~organism_part, method='ComBat')
+batch_corrected<-correct_batch_effect(experiment = experimentSummary, covariate= as.formula(opt$covariate), method='ComBat')
 
 if( !is.na(opt$tsv_corrected_counts) ) {
   write.table(cbind(`Gene ID`=rownames(assay(batch_corrected)),assay(batch_corrected)), file = opt$tsv_corrected_counts, sep = "\t", quote = FALSE, row.names = FALSE)

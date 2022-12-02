@@ -84,7 +84,7 @@ rule batch_correction_v2:
         summarized_rdata=config['output_path']+"/data/{accession}/{accession}-{genes_or_transcripts}-corrected_summarizedExp.rdata",
         tsv_corrected_counts=config['output_path']+"/data/{accession}/{accession}-{genes_or_transcripts}-corrected_counts.tsv"
     params:
-        covariate=config['covariate']
+        covariate="~"+config['covariate']
     conda:
         "envs/ma_batch_correct_combat.yaml"
     log: config['output_path']+"/logs/{accession}/{accession}-{genes_or_transcripts}-corrected_counts.log"
