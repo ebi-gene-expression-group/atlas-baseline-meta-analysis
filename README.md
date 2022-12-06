@@ -152,7 +152,3 @@ Jenkins job for this part of workflow is at http://gene-expression.ebi.ac.uk/jen
 
 Meta-data pipeline needs covariate without underscore, i.e. organism part
 Data analysis pipeline needs covariate with underscore, i.e. organism_part 
-
-## RefGenie
-
-Jenkins fails to fetch GTF using RefGenie, works fine on CLI with same command
