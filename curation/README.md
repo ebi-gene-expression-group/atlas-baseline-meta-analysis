@@ -1,1 +1,1 @@
-# Selection of studies that can be merged in mete-analysis
+# Selection of studies that can be merged in meta-analysis
