@@ -38,7 +38,7 @@ E-SUPR-1-transcripts-raw-counts.tsv.undecorated	E-SUPR-1.selected_studies.txt
 E-SUPR-1.gtf                                    E-SUPR-1-analysis-methods.tsv
 ```
 
-Most files are self explanatory, the `selected_studies.txt` files contains a comma separate list of the original accessions used.
+Most files are self explanatory, the `selected_studies.txt` files contains a comma separate list of the original accessions used. The `gtf` is copied from Refgenie references.
 
 ### Jenkins job
 
