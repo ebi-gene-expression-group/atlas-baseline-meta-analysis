@@ -1,8 +1,9 @@
-ANNOT_OBJECTS=["gene", "transcript"]
-METRICS=['tpm', 'fpkm']
 # set minimum snakemake version
 from snakemake.utils import min_version
 min_version("6.6.1")
+
+ANNOT_OBJECTS=["gene", "transcript"]
+METRICS=['tpm', 'fpkm']
 
 rule all:
     input:
