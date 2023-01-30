@@ -40,10 +40,6 @@ E-SUPR-1.gtf                                    E-SUPR-1-analysis-methods.tsv
 
 Most files are self explanatory, the `selected_studies.txt` files contains a comma separate list of the original accessions used. The `gtf` is copied from Refgenie references.
 
-### Jenkins job
-
-Jenkins job for this part of workflow is at http://gene-expression.ebi.ac.uk/jenkins/job/bulk_baseline_meta_analysis_dataprep/ 
-
 
 ## Data Analysis
 
@@ -89,9 +85,6 @@ This will create results in two directories:
 - tmp_results: main results, with all calculations for the merged dataset.
 - lengths: where lengths per gene, exon and transcripts are produced, based on the reference GTF file provided. These are used to normalise to TPMs and FPKMs.
 
-### Jenkins job
-
-Jenkins job for this part of workflow is at http://gene-expression.ebi.ac.uk/jenkins/job/bulk_baseline_meta_analysis/
 
 # Known bug
 
