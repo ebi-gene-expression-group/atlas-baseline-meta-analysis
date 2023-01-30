@@ -77,7 +77,7 @@ rule transform2R:
             --output {output.rdata} > {log}
         """
 
-rule batch_correction_v2:
+rule batch_correction:
     input:
         counts=rules.transform2R.output.rdata
     output:
