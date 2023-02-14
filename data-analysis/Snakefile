@@ -91,7 +91,7 @@ rule batch_correction:
     log: config['output_path']+"/logs/{accession}/{accession}-{genes_or_transcripts}-corrected_counts.log"
     shell:
         """
-        {workflow.basedir}/bin/batch_correction_v2.R \
+        {workflow.basedir}/bin/batch_correction.R \
             -i {input.counts} \
             -c {params.covariate} \
             --output {output.summarized_rdata} \
@@ -103,7 +103,7 @@ rule irap_raw2metric:
     Generates TPM and FPKM metrics from counts for accessions 
     """
     input:
-        counts=rules.batch_correction_v2.output.tsv_corrected_counts,
+        counts=rules.batch_correction.output.tsv_corrected_counts,
         lengths=rules.gene_feature_lengths_in_R.output.rdata
     output:
         corrected=config['output_path']+"/data/{accession}/{accession}-{genes_or_transcripts}s-corrected-{metric}s"
