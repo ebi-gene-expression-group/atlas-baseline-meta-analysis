@@ -1,0 +1,279 @@
+SUFFIXES=['-configuration.xml', '.idf.txt', '.condensed-sdrf.tsv', '.sdrf.txt']
+DATA_SUFFIXES=['-transcripts-raw-counts.tsv.undecorated', '-raw-counts.tsv.undecorated']
+TARGET_ANALYSIS_POST_CURATION="analysis-post-curation"
+TARGET_CURATION="curation"
+
+if "retrieve_data" in config:
+    SUFFIXES.extend(DATA_SUFFIXES)
+
+def optionals_merge():
+    """
+    Produces optionals for the condensed SDRF merge call based
+    covariate_skip_values config.
+    """
+    optionals=""
+    if "covariate_skip_values" in config:
+        optionals=f" --covariate-skip-values '{config['covariate_skip_values']}'"
+
+    return optionals
+
+
+def optionals_retrieve_data():
+    """
+    Produces optionals for the retrieve data call, based on the replace_downloads
+    and retrieve_data config variables.
+    """
+    optionals=""
+    if "replace_downloads" in config:
+        optionals=" -r"
+
+    if "retrieve_data" in config or ('target' in config and config['target'] == TARGET_ANALYSIS_POST_CURATION):
+        optionals=f"{optionals} -d"
+
+    return optionals
+
+def get_outputs():
+    """
+    Produces all outputs required, adding the data outputs if needed
+    when retrieve_data is set in config.
+    """
+    new_accession = config['new_accession']
+    outputs = []
+    if 'target' in config:
+        if config['target'] == TARGET_CURATION:
+            outputs = [config["output_path"]+f"/data/{new_accession}/{new_accession}.sdrf.txt"]
+        elif config['target'] == TARGET_ANALYSIS_POST_CURATION:
+            outputs.extend([config["output_path"]+f"/data/{new_accession}/{new_accession}{x}" for x in DATA_SUFFIXES])
+    else:
+        outputs = [config["output_path"]+f"/data/{new_accession}/{new_accession}.sdrf.txt",
+                    config["output_path"]+f"/data/{new_accession}/{new_accession}.condensed.sdrf.tsv",
+                    config["output_path"]+f"/data/{new_accession}/{new_accession}-configuration.xml"]
+
+        if "retrieve_data" in config:
+            outputs.extend([config["output_path"]+f"/data/{new_accession}/{new_accession}{x}" for x in DATA_SUFFIXES])
+
+    if "species" in config:
+        outputs.extend([config["output_path"]+f"/data/{new_accession}/{new_accession}.gtf"])
+
+    outputs.extend([config["output_path"]+f"/data/{new_accession}/{new_accession}-analysis-methods.tsv"])
+    return outputs
+
+def get_index_column(suffix):
+    """
+    Index column for merge data, returns transcript id or gene id based
+    on whether the suffix contains transcript or not.
+    """
+    if "transcript" in suffix:
+        return "Transcript ID"
+    return "Gene ID"
+
+
+def filter_accessions_by_exp_type_and_species(wildcards):
+    from xml.dom import minidom
+    import csv
+    accessions = config["accessions"].split(",")
+    selected_accessions = []
+
+    for accession in accessions:
+        flag = False
+        xmldoc = minidom.parse(
+            config['cache_path']+"/data/"+accession+"/"+accession+"-configuration.xml"
+        )
+        exp_type = []
+        config_tag = xmldoc.getElementsByTagName("configuration")
+        for i in config_tag:
+            if "rnaseq" in i.getAttribute("experimentType"):
+                flag = True
+            else:
+                print(accession+" has been discarded for not being RNA-Seq experiment.")
+        
+        sdrf = config['cache_path']+"/data/"+accession+"/"+accession+".condensed-sdrf.tsv"
+        with open(sdrf) as file:
+            tsv_file = csv.reader(file, delimiter="\t")
+
+            for line in tsv_file:
+                if line[4] == "organism" and line[5].lower().replace(" ","_") == config['species'].lower().replace(" ","_"):
+                     if flag == True:
+                         selected_accessions.append(accession)
+                         break
+                     else:
+                         print(accession+" has been discarded for not being the same species ("+line[3]+") as config species ("+config["species"]+")")
+                         break
+    
+    return ','.join(selected_accessions)
+
+
+def existing_or_retrieve(type):
+    """
+    If config input_path is set, then no data retrieval takes
+    place as the operator has sourced all needed files.
+    """
+    if "input_path" not in config:
+        if type == "path":
+            return rules.retrieve_data.output.data_path
+        elif type == "data":
+            return rules.retrieve_data.output.data
+        else:
+            print("Incompatible path type provided and input_path is not set in config.")
+    else:
+        if type == "path":
+            return config["input_path"]
+        else:
+            return []
+
+wildcard_constraints:
+    new_acc="E-\D+-\d+",
+    data_suffix=".*raw-counts.*"
+
+rule all:
+    input:
+        required_outputs=get_outputs()
+
+rule retrieve_data:
+    params:
+        accessions=config["accessions"],
+        optionals=optionals_retrieve_data()
+    output:
+        data=expand(config['cache_path']+"/data/{accession}/{accession}{suffix}", accession=config["accessions"].split(","), suffix=SUFFIXES),
+        data_path=directory(config["cache_path"]+"/data")
+    conda:
+        "envs/MAGETab-merger.yaml"
+    log: f"logs/{config['new_accession']}_retrieve_data.log"
+    shell:
+        """
+        mkdir -p {output.data_path}
+        retrieve_data.py -i {output.data_path} -a {params.accessions} -f {params.optionals} -d 2> {log}
+        """
+
+
+rule merge_condensed:
+    params:
+        accessions=filter_accessions_by_exp_type_and_species,
+        batch=config["batch"],
+        covariate=config["covariate"],
+        covariate_type=config["covariate_type"],
+        optionals=optionals_merge(),
+        outdir=config["output_path"]+"/data/{new_acc}"
+    input:
+        path=existing_or_retrieve("path"),
+        #path=rules.retrieve_data.output.data_path,
+        data=existing_or_retrieve("data")
+        #data=rules.retrieve_data.output.data
+    output:
+        merged_condensed=config["output_path"]+"/data/{new_acc}/{new_acc}.condensed.sdrf.tsv",
+        selected_studies=config["output_path"]+"/data/{new_acc}/{new_acc}.selected_studies.txt"
+    log: "logs/{new_acc}.log"
+    conda:
+        "envs/MAGETab-merger.yaml"
+    shell:
+        """
+        mkdir -p {params.outdir};
+        merge_condensed_sdrfs.py -d '{input.path}' \
+          -a '{params.accessions}' \
+          -o {params.outdir} -n '{wildcards.new_acc}' \
+          -b '{params.batch}' -c '{params.covariate}' \
+          --covariate-type '{params.covariate_type}' \
+          {params.optionals} 2>> {log}
+        """
+
+rule merge_sdrfs:
+    input:
+        accessions_file=rules.merge_condensed.output.selected_studies,
+        #path=rules.retrieve_data.output.data_path
+        path=existing_or_retrieve("path")
+    output:
+        merged_sdrf=config["output_path"]+"/data/{new_acc}/{new_acc}.sdrf.txt"
+    log: "logs/{new_acc}.merge-SDRFs.log"
+    conda:
+        "envs/MAGETab-merger.yaml"
+    shell:
+        """
+        rm -rf tmp_sdrfs
+        mkdir -p tmp_sdrfs
+        for acc in $(cat {input.accessions_file} | tr ',' ' '); do
+          ln {input.path}/$acc/$acc'.sdrf.txt' tmp_sdrfs/$acc'.sdrf.txt'
+        done
+        merge_sdrfs.py -d tmp_sdrfs --accessions-file {input.accessions_file} \
+            -o {output.merged_sdrf} 2> {log}
+        rm -rf tmp_sdrfs
+        """
+
+rule merge_baseline_configuration_xmls:
+    input:
+        accessions_file=rules.merge_condensed.output.selected_studies
+    params:
+        input_path=rules.retrieve_data.output.data_path,
+        output_path=config["output_path"]+"/data/{new_acc}"
+    output:
+        merged_xml=config["output_path"]+"/data/{new_acc}/{new_acc}-configuration.xml"
+    log: "logs/{new_acc}.log"
+    conda:
+        "envs/MAGETab-merger.yaml"
+    shell:
+        """
+        rm -rf tmp_configs
+        mkdir -p tmp_configs
+        for acc in $(cat {input.accessions_file} | tr ',' ' '); do
+          ln {params.input_path}/$acc/$acc'-configuration.xml' tmp_configs/$acc'-configuration.xml'
+        done
+        merge_baseline_configuration_xmls.py \
+            --accessions-file {input.accessions_file} \
+            -o {params.output_path} \
+            -n {wildcards.new_acc} -x tmp_configs 2> {log}
+        rm -rf tmp_configs
+        """
+
+rule retrieve_gtf:
+    output:
+        gtf=config["output_path"]+"/data/{new_accession}/{new_acc}.gtf"
+    params:
+        species=config["species"],
+        tag="current"
+    conda:
+        "envs/refgenie.yaml"
+    shell:
+        """
+        #genome=$(refgenie list --skip-read-lock | grep -E "{params.species}[, ]" | head -1 | grep 'gtf' | awk -F' ' '{{ print $2 }}' | sed 's/,//g')
+        gtf_path=$(refgenie seek --skip-read-lock {params.species}/ensembl_gtf:{params.tag})
+        gunzip -c $gtf_path > {output.gtf}
+        """
+
+rule merge_data:
+    input:
+        accessions_file=rules.merge_condensed.output.selected_studies,
+        merged_condensed=rules.merge_condensed.output.merged_condensed
+    log: "logs/{new_acc}.{data_suffix}.merge-data.log"
+    params:
+        input_path=rules.retrieve_data.output.data_path,
+        index_column=lambda wildcards: get_index_column(f"{wildcards.data_suffix}")
+    conda:
+        "envs/MAGETab-merger.yaml"
+    output:
+        merged_data=config["output_path"]+"/data/{new_acc}/{new_acc}{data_suffix}"
+    shell:
+        """
+        rm -rf tmp_data{wildcards.data_suffix}
+        mkdir -p tmp_data{wildcards.data_suffix}
+        for acc in $(cat {input.accessions_file} | tr ',' ' '); do
+            ln {params.input_path}/$acc/$acc{wildcards.data_suffix} tmp_data{wildcards.data_suffix}/$acc{wildcards.data_suffix}
+        done
+        merge_data.py -d tmp_data{wildcards.data_suffix} -s='{wildcards.data_suffix}' -o {output.merged_data} -c {input.merged_condensed} -i '{params.index_column}' --remove-rows-with-empty true 2> {log}
+        rm -rf tmp_data{wildcards.data_suffix}
+	"""
+
+rule analysis_method:
+    output:
+        tsv=config["output_path"]+"/data/{new_acc}/{new_acc}-analysis-methods.tsv"
+    params:
+        accessions=config["accessions"],
+	filtered_accession=filter_accessions_by_exp_type_and_species,
+        new_accession=config["new_accession"], 
+	species=config["species"]
+    shell:
+        """
+        echo "Pipeline version\t<a href=\"https://github.com/ebi-gene-expression-group/atlas-baseline-meta-analysis/\">Atlas baseline meta-analysis</a>" > {output}
+        echo "Input Accessions\t" {params.accessions} >> {output}
+	echo "Accession used in Analysis\t" {params.filtered_accession} >> {output}
+        echo "Output accession\t" {params.new_accession} >> {output}
+	echo "Retrieved GTF using RefGenie for the species\t" {params.species} >> {output}
+        """

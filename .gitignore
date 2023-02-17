@@ -1,0 +1,10 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.snakemake
+data
+results
+tmp_results
+test-data
+lengths
